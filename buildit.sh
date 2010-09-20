@@ -54,7 +54,6 @@ SPU_TARGET=spu
 PPU_TARGET=powerpc-eabi
 PPU64_TARGET=powerpc64-linux
 
-MAKEOPTS=-j9
 if [ -z $MAKEOPTS ]; then
 	MAKEOPTS=-j3
 fi
