@@ -51,8 +51,7 @@ PATCHDIR=patches
 BUILDTYPE=$1
 
 SPU_TARGET=spu
-PPU_TARGET=powerpc-eabi
-PPU64_TARGET=powerpc64-linux
+PPU_TARGET=powerpc64-linux
 
 if [ -z $MAKEOPTS ]; then
 	MAKEOPTS=-j3
@@ -194,7 +193,7 @@ buildgcc() {
 		$PS3DEV/$GCC_DIR/configure --target=$TARGET --disable-multilib \
 			--prefix=$PS3DEV/$FOLDER \
 			--enable-languages="c,c++" \
-			--enable-checking=release $NEWLIBFLAG && \
+			--enable-checking=release $NEWLIBFLAG $EXTRAFLAGS && \
 		$MAKE all-gcc $MAKEOPTS && \
 		$MAKE install-gcc
 	) || die "Error building gcc for target $TARGET"
@@ -238,11 +237,11 @@ buildppu() {
 	echo "******* Building PPU binutils"
 	buildbinutils $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu
+	EXTRAFLAGS=--with-cpu=cell buildgcc $PPU_TARGET ppu
 	echo "******* Building PPU Newlib"
 	buildnewlib $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu --with-newlib
+	EXTRAFLAGS=--with-cpu=cell buildgcc $PPU_TARGET ppu --with-newlib
 	echo "******* Building PPU GDB"
 	buildgdb $PPU_TARGET ppu
 	echo "******* Creating symlinks!"
@@ -250,31 +249,12 @@ buildppu() {
 	echo "******* PPU toolchain built and installed"
 }
 
-buildppu64() {
-	extract_archives
-	cleanbuild
-	makedirs
-	echo "******* Building PPU64 binutils"
-	buildbinutils $PPU64_TARGET ppu64
-	echo "******* Building PPU64 GCC"
-	buildgcc $PPU64_TARGET ppu64
-	echo "******* Building PPU64 Newlib"
-	buildnewlib $PPU64_TARGET ppu64
-	echo "******* Building PPU64 GCC"
-	buildgcc $PPU64_TARGET ppu64 --with-newlib
-	echo "******* Building PPU64 GDB"
-	buildgdb $PPU64_TARGET ppu64
-	echo "******* Creating symlinks!"
-	create_syms $PPU64_TARGET ppu64
-	echo "******* PPU64 toolchain built and installed"
-}
-
 if [ -z "$PS3DEV" ]; then
 	die "Please set PS3DEV in your environment."
 fi
 
 if [ $# -eq 0 ]; then
-	die "Please specify build type(s) (ppu/ppu64/spu/clean)"
+	die "Please specify build type(s) (all/ppu/spu/clean)"
 fi
 
 if [ "$BUILDTYPE" = "clean" ]; then
@@ -295,7 +275,6 @@ download "$GDB_URI" "$GDB_TARBALL"
 
 if [ "$1" = "all" ]; then
 	buildppu
-	buildppu64
 	buildspu
 	cleanbuild
 	cleansrc
@@ -308,7 +287,6 @@ while true; do
 	fi
 	case $1 in
 		ppu)		buildppu ;;
-		ppu64)		buildppu64 ;;
 		spu)		buildspu ;;
 		clean)		cleanbuild; cleansrc; exit 0 ;;
 		*)
