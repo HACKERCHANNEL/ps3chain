@@ -160,6 +160,13 @@ makedirs() {
 	mkdir -p $PS3DEV/build_newlib || die "Error making newlib build directory $PS3DEV/build_newlib"
 }
 
+copy_makerules() {
+	TARGET=$1
+	cp common.mk $PS3DEV/
+	cp common_pre.mk $PS3DEV/
+	cp $TARGET.mk $PS3DEV/
+}
+
 buildbinutils() {
 	TARGET=$1
 	FOLDER=$2
@@ -188,12 +195,14 @@ buildgcc() {
 	TARGET=$1
 	FOLDER=$2
 	NEWLIBFLAG=$3
+	CPUFLAG=$4
 	(
 		cd $PS3DEV/build_gcc && \
 		$PS3DEV/$GCC_DIR/configure --target=$TARGET --disable-multilib \
 			--prefix=$PS3DEV/$FOLDER \
 			--enable-languages="c,c++" \
-			--enable-checking=release $NEWLIBFLAG $EXTRAFLAGS && \
+			--enable-checking=release $NEWLIBFLAG $EXTRAFLAGS \
+			$CPUFLAG && \
 		$MAKE all-gcc $MAKEOPTS && \
 		$MAKE install-gcc
 	) || die "Error building gcc for target $TARGET"
@@ -217,6 +226,7 @@ buildspu() {
 	extract_archives
 	cleanbuild
 	makedirs
+	copy_makerules spu
 	echo "******* Building SPU binutils"
 	buildbinutils $SPU_TARGET spu
 	echo "******* Building SPU GCC"
@@ -234,14 +244,15 @@ buildppu() {
 	extract_archives
 	cleanbuild
 	makedirs
+	copy_makerules ppu
 	echo "******* Building PPU binutils"
 	buildbinutils $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	EXTRAFLAGS=--with-cpu=cell buildgcc $PPU_TARGET ppu
+	buildgcc $PPU_TARGET ppu --with-cpu=cell 
 	echo "******* Building PPU Newlib"
 	buildnewlib $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	EXTRAFLAGS=--with-cpu=cell buildgcc $PPU_TARGET ppu --with-newlib
+	buildgcc $PPU_TARGET ppu --with-newlib --with-cpu=cell 
 	echo "******* Building PPU GDB"
 	buildgdb $PPU_TARGET ppu
 	echo "******* Creating symlinks!"
