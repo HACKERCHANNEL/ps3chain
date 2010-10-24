@@ -209,10 +209,12 @@ buildnewlib() {
 	(
 		cd $PS3DEV/build_newlib && \
 		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET \
-			--prefix=$PS3DEV/$FOLDER \
-			--with-target-subdir=$TARGET && \
+			--prefix=$PS3DEV/$FOLDER && \
 		$MAKE $MAKEOPTS && \
 		$MAKE install
+		cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib $PS3DEV/$FOLDER/$TARGET/
+		cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/include $PS3DEV/$FOLDER/$TARGET/
+		rm -rf $PS3DEV/$FOLDER/$NEWLIBTARGET
 	) || die "Error building newlib for target $TARGET"
 }
 
