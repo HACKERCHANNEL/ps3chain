@@ -46,12 +46,16 @@ NEWLIB_DIR="newlib-$NEWLIB_VER"
 NEWLIB_TARBALL="newlib-$NEWLIB_VER.tar.gz"
 NEWLIB_URI="ftp://sources.redhat.com/pub/newlib/$NEWLIB_TARBALL"
 
+CRT_DIR="crt"
+
 PATCHDIR=patches
 
 BUILDTYPE=$1
 
 SPU_TARGET=spu
+SPU_NEWLIB_TARGET=$SPU_TARGET
 PPU_TARGET=powerpc64-linux
+PPU_NEWLIB_TARGET=ppc64
 
 if [ -z $MAKEOPTS ]; then
 	MAKEOPTS=-j3
@@ -78,12 +82,14 @@ cleansrc() {
 	[ -e $PS3DEV/$BINUTILS_DIR ] && rm -rf $PS3DEV/$BINUTILS_DIR
 	[ -e $PS3DEV/$GCC_DIR ] && rm -rf $PS3DEV/$GCC_DIR
 	[ -e $PS3DEV/$GDB_DIR ] && rm -rf $PS3DEV/$GDB_DIR
+	[ -e $PS3DEV/$CRT_DIR ] && rm -rf $PS3DEV/$CRT_DIR
 	[ -e $PS3DEV/$NEWLIB_DIR ] && rm -rf $PS3DEV/$NEWLIB_DIR
 }
 
 cleanbuild() {
 	[ -e $PS3DEV/build_binutils ] && rm -rf $PS3DEV/build_binutils
 	[ -e $PS3DEV/build_gcc ] && rm -rf $PS3DEV/build_gcc
+	[ -e $PS3DEV/build_crt ] && rm -rf $PS3DEV/build_crt
 	[ -e $PS3DEV/build_gdb ] && rm -rf $PS3DEV/build_gdb
 	[ -e $PS3DEV/build_newlib ] && rm -rf $PS3DEV/build_newlib
 }
@@ -156,6 +162,7 @@ create_syms() {
 makedirs() {
 	mkdir -p $PS3DEV/build_binutils || die "Error making binutils build directory $PS3DEV/build_binutils"
 	mkdir -p $PS3DEV/build_gcc || die "Error making gcc build directory $PS3DEV/build_gcc"
+	mkdir -p $PS3DEV/build_crt || die "Error making crt build directory $PS3DEV/build_crt"
 	mkdir -p $PS3DEV/build_gdb || die "Error making gdb build directory $PS3DEV/build_gdb"
 	mkdir -p $PS3DEV/build_newlib || die "Error making newlib build directory $PS3DEV/build_newlib"
 }
@@ -181,30 +188,65 @@ buildbinutils() {
 
 buildnewlib() {
 	TARGET=$1
-	FOLDER=$2
+	NEWLIBTARGET=$2
+	FOLDER=$3
+
+	export CC_FOR_TARGET=$TARGET-gcc
+	export GCC_FOR_TARGET=$TARGET-gcc
+	export CXX_FOR_TARGET=$TARGET-g++
+	export LD_FOR_TARGET=$TARGET-ld
+	export AS_FOR_TARGET=$TARGET-as
+	export AR_FOR_TARGET=$TARGET-ar
+	export RANLIB_FOR_TARGET=$TARGET-ranlib
+	export NM_FOR_TARGET=$TARGET-nm
+	export STRIP_FOR_TARGET=$TARGET-strip
+	export OBJDUMP_FOR_TARGET=$TARGET-objdump
+	export OBJCOPY_FOR_TARGET=$TARGET-objcopy
 	(
 		cd $PS3DEV/build_newlib && \
-		$PS3DEV/$NEWLIB_DIR/configure --target=$TARGET \
-			--prefix=$PS3DEV/$FOLDER && \
+		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET \
+			--prefix=$PS3DEV/$FOLDER \
+			--with-target-subdir=$TARGET && \
 		$MAKE $MAKEOPTS && \
 		$MAKE install
 	) || die "Error building newlib for target $TARGET"
 }
 
+buildcrt() {
+	TARGET=$1
+	FOLDER=$2
+	(
+		cd $PS3DEV/build_crt
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crti.S -o crti.o
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crtn.S -o crtn.o
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt0.S -o crt0.o
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o
+		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o
+		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib/
+		cp $PS3DEV/$CRT_DIR/fenv.h $PS3DEV/$FOLDER/$TARGET/include/
+	) || die "Error building crt for target $TARGET"
+}
+
 buildgcc() {
 	TARGET=$1
 	FOLDER=$2
-	NEWLIBFLAG=$3
-	CPUFLAG=$4
+	MAKETARGET=$3
+	INSTALLTARGET=$4
+	NEWLIBFLAG=$5
+	CPUFLAG=$6
 	(
 		cd $PS3DEV/build_gcc && \
-		$PS3DEV/$GCC_DIR/configure --target=$TARGET --disable-multilib \
+		$PS3DEV/$GCC_DIR/configure --target=$TARGET \
+			--disable-multilib \
+			--disable-threads \
+			--disable-libgomp \
+			--disable-shared \
 			--prefix=$PS3DEV/$FOLDER \
 			--enable-languages="c,c++" \
 			--enable-checking=release $NEWLIBFLAG $EXTRAFLAGS \
 			$CPUFLAG && \
-		$MAKE all-gcc $MAKEOPTS && \
-		$MAKE install-gcc
+		$MAKE $MAKETARGET $MAKEOPTS && \
+		$MAKE $INSTALLTARGET
 	) || die "Error building gcc for target $TARGET"
 }
 
@@ -230,11 +272,11 @@ buildspu() {
 	echo "******* Building SPU binutils"
 	buildbinutils $SPU_TARGET spu
 	echo "******* Building SPU GCC"
-	buildgcc $SPU_TARGET spu
+	buildgcc $SPU_TARGET spu all-gcc install-gcc
 	echo "******* Building SPU Newlib"
-	buildnewlib $SPU_TARGET spu
-	echo "******* Building SPU GCC"
-	buildgcc $SPU_TARGET spu --with-newlib
+	buildnewlib $SPU_TARGET $SPU_NEWLIB_TARGET spu
+	echo "******* Building SPU GCC" # TODO: Write default crt/newlib glue for spu and try a full build
+	buildgcc $SPU_TARGET spu all-gcc install-gcc --with-newlib
 	echo "******* Building SPU GDB"
 	buildgdb $SPU_TARGET spu
 	echo "******* SPU toolchain built and installed"
@@ -248,11 +290,13 @@ buildppu() {
 	echo "******* Building PPU binutils"
 	buildbinutils $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu --with-cpu=cell 
+	buildgcc $PPU_TARGET ppu all-gcc install-gcc --with-cpu=cell
 	echo "******* Building PPU Newlib"
-	buildnewlib $PPU_TARGET ppu
+	buildnewlib $PPU_TARGET $PPU_NEWLIB_TARGET ppu
+	echo "******* Building PPU CRT"
+	buildcrt $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu --with-newlib --with-cpu=cell 
+	buildgcc $PPU_TARGET ppu all install --with-newlib --with-cpu=cell
 	echo "******* Building PPU GDB"
 	buildgdb $PPU_TARGET ppu
 	echo "******* Creating symlinks!"
@@ -275,6 +319,11 @@ if [ "$BUILDTYPE" = "clean" ]; then
 fi
 
 #cp -R $PATCHDIR $PS3DEV
+
+(
+	mkdir -p "$PS3DEV/$CRT_DIR"
+	cp -r crt/* "$PS3DEV/$CRT_DIR/"
+) || die "Unable to copy crt to build dir"
 
 download "$BINUTILS_URI" "$BINUTILS_TARBALL"
 download "$GMP_URI" "$GMP_TARBALL"
