@@ -128,6 +128,9 @@ extract_archives() {
 	mv "$PS3DEV/$GCC_DIR/$MPFR_DIR" "$PS3DEV/$GCC_DIR/mpfr" || die "Error renaming $MPFR_DIR -> mpfr"
 	extract "$MPC_TARBALL" "$PS3DEV/$GCC_DIR"
 	mv "$PS3DEV/$GCC_DIR/$MPC_DIR" "$PS3DEV/$GCC_DIR/mpc" || die "Error renaming $MPC_DIR -> mpc"
+	(
+		cp -r "$CRT_DIR" "$PS3DEV/"
+	) || die "Unable to copy crt to build dir"
 }
 
 create_syms() {
@@ -224,6 +227,7 @@ buildcrt() {
 		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o
 		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o
 		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib/
+		mkdir -p $PS3DEV/$FOLDER/$TARGET/include
 		cp $PS3DEV/$CRT_DIR/fenv.h $PS3DEV/$FOLDER/$TARGET/include/
 	) || die "Error building crt for target $TARGET"
 }
@@ -320,11 +324,6 @@ if [ "$BUILDTYPE" = "clean" ]; then
 fi
 
 #cp -R $PATCHDIR $PS3DEV
-
-(
-	mkdir -p "$PS3DEV"
-	cp -r "$CRT_DIR" "$PS3DEV/"
-) || die "Unable to copy crt to build dir"
 
 download "$BINUTILS_URI" "$BINUTILS_TARBALL"
 download "$GMP_URI" "$GMP_TARBALL"
