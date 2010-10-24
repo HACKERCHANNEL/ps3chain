@@ -191,17 +191,18 @@ buildnewlib() {
 	NEWLIBTARGET=$2
 	FOLDER=$3
 
-	export CC_FOR_TARGET=$TARGET-gcc
-	export GCC_FOR_TARGET=$TARGET-gcc
-	export CXX_FOR_TARGET=$TARGET-g++
-	export LD_FOR_TARGET=$TARGET-ld
-	export AS_FOR_TARGET=$TARGET-as
-	export AR_FOR_TARGET=$TARGET-ar
-	export RANLIB_FOR_TARGET=$TARGET-ranlib
-	export NM_FOR_TARGET=$TARGET-nm
-	export STRIP_FOR_TARGET=$TARGET-strip
-	export OBJDUMP_FOR_TARGET=$TARGET-objdump
-	export OBJCOPY_FOR_TARGET=$TARGET-objcopy
+	PREFIX=$PS3DEV/$FOLDER/bin/$TARGET
+	export CC_FOR_TARGET=$PREFIX-gcc
+	export GCC_FOR_TARGET=$PREFIX-gcc
+	export CXX_FOR_TARGET=$PREFIX-g++
+	export LD_FOR_TARGET=$PREFIX-ld
+	export AS_FOR_TARGET=$PREFIX-as
+	export AR_FOR_TARGET=$PREFIX-ar
+	export RANLIB_FOR_TARGET=$PREFIX-ranlib
+	export NM_FOR_TARGET=$PREFIX-nm
+	export STRIP_FOR_TARGET=$PREFIX-strip
+	export OBJDUMP_FOR_TARGET=$PREFIX-objdump
+	export OBJCOPY_FOR_TARGET=$PREFIX-objcopy
 	(
 		cd $PS3DEV/build_newlib && \
 		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET \
@@ -321,8 +322,8 @@ fi
 #cp -R $PATCHDIR $PS3DEV
 
 (
-	mkdir -p "$PS3DEV/$CRT_DIR"
-	cp -r crt/* "$PS3DEV/$CRT_DIR/"
+	mkdir -p "$PS3DEV"
+	cp -r "$CRT_DIR" "$PS3DEV/"
 ) || die "Unable to copy crt to build dir"
 
 download "$BINUTILS_URI" "$BINUTILS_TARBALL"
