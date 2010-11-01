@@ -128,9 +128,7 @@ extract_archives() {
 	mv "$PS3DEV/$GCC_DIR/$MPFR_DIR" "$PS3DEV/$GCC_DIR/mpfr" || die "Error renaming $MPFR_DIR -> mpfr"
 	extract "$MPC_TARBALL" "$PS3DEV/$GCC_DIR"
 	mv "$PS3DEV/$GCC_DIR/$MPC_DIR" "$PS3DEV/$GCC_DIR/mpc" || die "Error renaming $MPC_DIR -> mpc"
-	(
-		cp -r "$CRT_DIR" "$PS3DEV/"
-	) || die "Unable to copy crt to build dir"
+	cp -r "$CRT_DIR" "$PS3DEV/" || die "Unable to copy crt to build dir"
 }
 
 create_syms() {
@@ -208,12 +206,13 @@ buildnewlib() {
 	export OBJCOPY_FOR_TARGET=$PREFIX-objcopy
 	(
 		cd $PS3DEV/build_newlib && \
-		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET \
+		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET --disable-multilib \
 			--prefix=$PS3DEV/$FOLDER && \
 		$MAKE $MAKEOPTS && \
 		$MAKE install
 		if [ "$TARGET" != "$NEWLIBTARGET" ]; then
-			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib $PS3DEV/$FOLDER/$TARGET/
+			mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64
+			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib/* $PS3DEV/$FOLDER/$TARGET/lib64
 			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/include $PS3DEV/$FOLDER/$TARGET/
 			rm -rf $PS3DEV/$FOLDER/$NEWLIBTARGET
 		fi
@@ -230,7 +229,8 @@ buildcrt() {
 		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt0.S -o crt0.o
 		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o
 		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o
-		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib/
+		mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64
+		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib64/
 		mkdir -p $PS3DEV/$FOLDER/$TARGET/include
 		cp $PS3DEV/$CRT_DIR/fenv.h $PS3DEV/$FOLDER/$TARGET/include/
 	) || die "Error building crt for target $TARGET"
