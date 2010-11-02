@@ -213,8 +213,7 @@ buildnewlib() {
 	) || die "Error building newlib for target $TARGET"
 	(
 		if [ "$TARGET" != "$NEWLIBTARGET" ]; then
-			mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64 && \
-			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib/* $PS3DEV/$FOLDER/$TARGET/lib64 && \
+			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib $PS3DEV/$FOLDER/$TARGET/ && \
 			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/include $PS3DEV/$FOLDER/$TARGET/ && \
 			rm -rf $PS3DEV/$FOLDER/$NEWLIBTARGET
 		fi
@@ -231,34 +230,43 @@ buildcrt() {
 		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt0.S -o crt0.o && \
 		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o && \
 		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o && \
-		mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64 && \
-		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib64/ && \
+		mkdir -p $PS3DEV/$FOLDER/$TARGET/lib && \
+		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib/ && \
 		mkdir -p $PS3DEV/$FOLDER/$TARGET/include && \
-		cp $PS3DEV/$CRT_DIR/*.h $PS3DEV/$FOLDER/$TARGET/include/
+		cp $PS3DEV/$CRT_DIR/fenv.h $PS3DEV/$FOLDER/$TARGET/include/
 	) || die "Error building crt for target $TARGET"
 }
 
 buildgcc() {
 	TARGET=$1
 	FOLDER=$2
-	MAKETARGET=$3
-	INSTALLTARGET=$4
-	NEWLIBFLAG=$5
-	CPUFLAG=$6
+	CPUFLAG=$3
 	(
 		cd $PS3DEV/build_gcc && \
-		$PS3DEV/$GCC_DIR/configure --target=$TARGET \
+		$PS3DEV/$GCC_DIR/configure \
+			--target=$TARGET \
 			--disable-multilib \
 			--disable-threads \
 			--disable-libgomp \
 			--disable-shared \
-			--prefix=$PS3DEV/$FOLDER \
+			--with-newlib \
 			--enable-languages="c,c++" \
-			--enable-checking=release $NEWLIBFLAG $EXTRAFLAGS \
+			--enable-checking=release \
+			--prefix=$PS3DEV/$FOLDER \
+			$EXTRAFLAGS \
 			$CPUFLAG && \
-		$MAKE $MAKETARGET $MAKEOPTS && \
-		$MAKE $INSTALLTARGET
+		$MAKE all-gcc $MAKEOPTS && \
+		$MAKE install-gcc
 	) || die "Error building gcc for target $TARGET"
+}
+
+continuegcc() {
+	TARGET=$1
+	(
+		cd $PS3DEV/build_gcc && \
+		$MAKE all $MAKEOPTS && \
+		$MAKE install
+	) || die "Error building gcc support libs for target $TARGET"
 }
 
 buildgdb() {
@@ -283,11 +291,14 @@ buildspu() {
 	echo "******* Building SPU binutils"
 	buildbinutils $SPU_TARGET spu
 	echo "******* Building SPU GCC"
-	buildgcc $SPU_TARGET spu all-gcc install-gcc
+	buildgcc $SPU_TARGET spu
 	echo "******* Building SPU Newlib"
 	buildnewlib $SPU_TARGET $SPU_NEWLIB_TARGET spu
-	echo "******* Building SPU GCC" # TODO: Write default crt/newlib glue for spu and try a full build
-	buildgcc $SPU_TARGET spu all-gcc install-gcc --with-newlib
+	# TODO: Write default crt/newlib glue for spu and try a full build
+	#echo "******* Building SPU CRT"
+	#buildcrt $SPU_TARGET spu
+	#echo "******* Building SPU GCC"
+	#continuegcc $SPU_TARGET
 	echo "******* Building SPU GDB"
 	buildgdb $SPU_TARGET spu
 	echo "******* SPU toolchain built and installed"
@@ -301,13 +312,13 @@ buildppu() {
 	echo "******* Building PPU binutils"
 	buildbinutils $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu all-gcc install-gcc --with-cpu=cell
+	buildgcc $PPU_TARGET ppu --with-cpu=cell
 	echo "******* Building PPU Newlib"
 	buildnewlib $PPU_TARGET $PPU_NEWLIB_TARGET ppu
 	echo "******* Building PPU CRT"
 	buildcrt $PPU_TARGET ppu
 	echo "******* Building PPU GCC"
-	buildgcc $PPU_TARGET ppu all install --with-newlib --with-cpu=cell
+	continuegcc $PPU_TARGET
 	echo "******* Building PPU GDB"
 	buildgdb $PPU_TARGET ppu
 	echo "******* Creating symlinks!"
