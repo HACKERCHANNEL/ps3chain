@@ -210,29 +210,31 @@ buildnewlib() {
 			--prefix=$PS3DEV/$FOLDER && \
 		$MAKE $MAKEOPTS && \
 		$MAKE install
+	) || die "Error building newlib for target $TARGET"
+	(
 		if [ "$TARGET" != "$NEWLIBTARGET" ]; then
-			mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64
-			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib/* $PS3DEV/$FOLDER/$TARGET/lib64
-			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/include $PS3DEV/$FOLDER/$TARGET/
+			mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64 && \
+			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/lib/* $PS3DEV/$FOLDER/$TARGET/lib64 && \
+			cp -r $PS3DEV/$FOLDER/$NEWLIBTARGET/include $PS3DEV/$FOLDER/$TARGET/ && \
 			rm -rf $PS3DEV/$FOLDER/$NEWLIBTARGET
 		fi
-	) || die "Error building newlib for target $TARGET"
+	) || die "Error copying newlib for target $TARGET"
 }
 
 buildcrt() {
 	TARGET=$1
 	FOLDER=$2
 	(
-		cd $PS3DEV/build_crt
-		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crti.S -o crti.o
-		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crtn.S -o crtn.o
-		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt0.S -o crt0.o
-		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o
-		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o
-		mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64
-		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib64/
-		mkdir -p $PS3DEV/$FOLDER/$TARGET/include
-		cp $PS3DEV/$CRT_DIR/fenv.h $PS3DEV/$FOLDER/$TARGET/include/
+		cd $PS3DEV/build_crt && \
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crti.S -o crti.o && \
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crtn.S -o crtn.o && \
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt0.S -o crt0.o && \
+		$PS3DEV/$FOLDER/bin/$TARGET-gcc -c $PS3DEV/$CRT_DIR/$TARGET/crt1.c -o crt.o && \
+		$PS3DEV/$FOLDER/bin/$TARGET-ld -r crt0.o crt.o -o crt1.o && \
+		mkdir -p $PS3DEV/$FOLDER/$TARGET/lib64 && \
+		cp crti.o crtn.o crt0.o crt1.o $PS3DEV/$FOLDER/$TARGET/lib64/ && \
+		mkdir -p $PS3DEV/$FOLDER/$TARGET/include && \
+		cp $PS3DEV/$CRT_DIR/*.h $PS3DEV/$FOLDER/$TARGET/include/
 	) || die "Error building crt for target $TARGET"
 }
 
