@@ -294,11 +294,8 @@ buildspu() {
 	buildgcc $SPU_TARGET spu
 	echo "******* Building SPU Newlib"
 	buildnewlib $SPU_TARGET $SPU_NEWLIB_TARGET spu
-	# TODO: Write default crt/newlib glue for spu and try a full build
-	#echo "******* Building SPU CRT"
-	#buildcrt $SPU_TARGET spu
-	#echo "******* Building SPU GCC"
-	#continuegcc $SPU_TARGET
+	echo "******* Building SPU GCC"
+	continuegcc $SPU_TARGET
 	echo "******* Building SPU GDB"
 	buildgdb $SPU_TARGET spu
 	echo "******* SPU toolchain built and installed"
