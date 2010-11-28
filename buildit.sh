@@ -193,18 +193,19 @@ buildnewlib() {
 	FOLDER=$3
 
 	PREFIX=$PS3DEV/$FOLDER/bin/$TARGET
-	export CC_FOR_TARGET=$PREFIX-gcc
-	export GCC_FOR_TARGET=$PREFIX-gcc
-	export CXX_FOR_TARGET=$PREFIX-g++
-	export LD_FOR_TARGET=$PREFIX-ld
-	export AS_FOR_TARGET=$PREFIX-as
-	export AR_FOR_TARGET=$PREFIX-ar
-	export RANLIB_FOR_TARGET=$PREFIX-ranlib
-	export NM_FOR_TARGET=$PREFIX-nm
-	export STRIP_FOR_TARGET=$PREFIX-strip
-	export OBJDUMP_FOR_TARGET=$PREFIX-objdump
-	export OBJCOPY_FOR_TARGET=$PREFIX-objcopy
 	(
+		export CC_FOR_TARGET=$PREFIX-gcc
+		export GCC_FOR_TARGET=$PREFIX-gcc
+		export CXX_FOR_TARGET=$PREFIX-g++
+		export LD_FOR_TARGET=$PREFIX-ld
+		export AS_FOR_TARGET=$PREFIX-as
+		export AR_FOR_TARGET=$PREFIX-ar
+		export RANLIB_FOR_TARGET=$PREFIX-ranlib
+		export NM_FOR_TARGET=$PREFIX-nm
+		export STRIP_FOR_TARGET=$PREFIX-strip
+		export OBJDUMP_FOR_TARGET=$PREFIX-objdump
+		export OBJCOPY_FOR_TARGET=$PREFIX-objcopy
+
 		cd $PS3DEV/build_newlib && \
 		$PS3DEV/$NEWLIB_DIR/configure --target=$NEWLIBTARGET --disable-multilib \
 			--prefix=$PS3DEV/$FOLDER && \
